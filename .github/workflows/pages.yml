@@ -1,0 +1,46 @@
+name: Stroomprijzen pagina
+
+on:
+  schedule:
+    - cron: "40 3 * * *"    # ca. 04:40 of 05:40 Nederlandse tijd: prijzen van vandaag
+    - cron: "40 13 * * *"   # ca. 14:40 of 15:40: prijzen van morgen zijn dan bekend
+    - cron: "40 15 * * *"   # herhaling, voor als de prijzen later binnenkomen
+  workflow_dispatch:        # handmatig starten via het tabblad Actions
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publiceer:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Bestanden ophalen
+        uses: actions/checkout@v5
+
+      - name: Pages instellen
+        uses: actions/configure-pages@v5
+
+      - name: Pagina maken
+        run: |
+          mkdir -p site
+          python3 maak_html.py --uit site/index.html
+
+      - name: Pagina klaarzetten
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+      - name: Publiceren
+        id: deployment
+        uses: actions/deploy-pages@v4
